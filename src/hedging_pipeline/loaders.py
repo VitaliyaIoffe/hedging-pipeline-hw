@@ -37,8 +37,25 @@ class DataQualityError(Exception):
     """Raised when required columns are missing or data validation fails."""
 
 
-class EventLoader:
-    """Loads and normalizes NASDAQ-100 event Excel and daily bars parquet."""
+class BaseLoader:
+    """Base for file-based data loaders: path resolution and existence check."""
+
+    @staticmethod
+    def _resolve_path(path: Path | str) -> Path:
+        return Path(path).resolve()
+
+    @staticmethod
+    def _ensure_exists(path: Path, label: str = "File") -> None:
+        if not path.exists():
+            raise FileNotFoundError(f"{label} not found: {path}")
+
+    def load_normalized(self, path: Path | str) -> pd.DataFrame:
+        """Load from path and return normalized DataFrame. Override in subclasses."""
+        raise NotImplementedError("load_normalized must be implemented by subclass")
+
+
+class EventsLoader(BaseLoader):
+    """Loads and normalizes NASDAQ-100 event Excel to one row per stock action."""
 
     def __init__(
         self,
@@ -46,7 +63,6 @@ class EventLoader:
         events_sheet: None | int | str = None,
         required_event_columns: list[str] | None = None,
         optional_event_columns: list[str] | None = None,
-        bars_column_map: dict[str, str] | None = None,
     ) -> None:
         self.events_sheet: None | int | str = (
             events_sheet if events_sheet is not None else EVENTS_SHEET_NAME
@@ -57,16 +73,14 @@ class EventLoader:
         self.optional_event_columns: list[str] = optional_event_columns or list(
             EVENTS_OPTIONAL_COLUMNS
         )
-        self.bars_column_map: dict[str, str] = bars_column_map or dict(BARS_COLUMN_MAP)
 
     def load_events(self, path: Path | str) -> pd.DataFrame:
         """
         Load the NASDAQ-100 events Excel file and validate required columns.
         Does not normalize to one row per action; use normalize_events() for that.
         """
-        path = Path(path)
-        if not path.exists():
-            raise FileNotFoundError(f"Events file not found: {path}")
+        path = self._resolve_path(path)
+        self._ensure_exists(path, "Events file")
 
         logger.info("Loading events from %s", path)
         df: pd.DataFrame = pd.read_excel(path, sheet_name=self.events_sheet or 0)
@@ -123,18 +137,32 @@ class EventLoader:
             logger.warning("Normalized events DataFrame is empty")
         return out
 
-    def load_and_normalize_events(self, path: Path | str) -> pd.DataFrame:
-        """Load events and return normalized one-row-per-action DataFrame."""
+    def load_normalized(self, path: Path | str) -> pd.DataFrame:
+        """Load from path and return normalized one-row-per-action events DataFrame."""
         raw = self.load_events(path)
         return self.normalize_events(raw)
+
+    def load_and_normalize_events(self, path: Path | str) -> pd.DataFrame:
+        """Load events and return normalized one-row-per-action DataFrame."""
+        return self.load_normalized(path)
+
+
+class DailyBarsLoader(BaseLoader):
+    """Loads daily OHLCV parquet and normalizes column names and dtypes."""
+
+    def __init__(
+        self,
+        *,
+        bars_column_map: dict[str, str] | None = None,
+    ) -> None:
+        self.bars_column_map: dict[str, str] = bars_column_map or dict(BARS_COLUMN_MAP)
 
     def load_daily_bars(self, path: Path | str) -> pd.DataFrame:
         """
         Load daily OHLCV parquet and normalize column names to lowercase convention.
         """
-        path = Path(path)
-        if not path.exists():
-            raise FileNotFoundError(f"Daily bars file not found: {path}")
+        path = self._resolve_path(path)
+        self._ensure_exists(path, "Daily bars file")
 
         logger.info("Loading daily bars from %s", path)
         df = pd.read_parquet(path)
@@ -162,12 +190,58 @@ class EventLoader:
         )
         return df
 
+    def load_normalized(self, path: Path | str) -> pd.DataFrame:
+        """Load from path and return normalized daily bars DataFrame."""
+        return self.load_daily_bars(path)
+
+
+class PipelineLoader:
+    """
+    Composite loader for the pipeline: delegates to EventsLoader and DailyBarsLoader.
+    Single entry point for load_all, load_events, load_daily_bars, load_and_normalize_events.
+    """
+
+    def __init__(
+        self,
+        *,
+        events_sheet: None | int | str = None,
+        required_event_columns: list[str] | None = None,
+        optional_event_columns: list[str] | None = None,
+        bars_column_map: dict[str, str] | None = None,
+    ) -> None:
+        self._events_loader = EventsLoader(
+            events_sheet=events_sheet,
+            required_event_columns=required_event_columns,
+            optional_event_columns=optional_event_columns,
+        )
+        self._bars_loader = DailyBarsLoader(bars_column_map=bars_column_map)
+
+    def load_events(self, path: Path | str) -> pd.DataFrame:
+        """Load raw events Excel (no normalization)."""
+        return self._events_loader.load_events(path)
+
+    def normalize_events(self, raw_events: pd.DataFrame) -> pd.DataFrame:
+        """Normalize raw events to one row per stock action."""
+        return self._events_loader.normalize_events(raw_events)
+
+    def load_and_normalize_events(self, path: Path | str) -> pd.DataFrame:
+        """Load events and return normalized one-row-per-action DataFrame."""
+        return self._events_loader.load_normalized(path)
+
+    def load_daily_bars(self, path: Path | str) -> pd.DataFrame:
+        """Load daily bars parquet."""
+        return self._bars_loader.load_normalized(path)
+
     def load_all(
         self,
         events_path: Path | str,
         bars_path: Path | str,
     ) -> tuple[pd.DataFrame, pd.DataFrame]:
         """Load and normalize events and load daily bars. Returns (events_df, bars_df)."""
-        events = self.load_and_normalize_events(events_path)
-        bars = self.load_daily_bars(bars_path)
+        events = self._events_loader.load_normalized(events_path)
+        bars = self._bars_loader.load_normalized(bars_path)
         return events, bars
+
+
+# Backward compatibility: pipeline and tests use this name
+EventLoader = PipelineLoader
