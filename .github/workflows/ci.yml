@@ -101,3 +101,11 @@ jobs:
           else
             echo "Data files not found; skipping pipeline run."
           fi
+
+      - name: Upload pipeline output
+        uses: actions/upload-artifact@v4
+        if: success() || failure()
+        with:
+          name: pipeline-output
+          path: output/
+          if-no-files-found: ignore
