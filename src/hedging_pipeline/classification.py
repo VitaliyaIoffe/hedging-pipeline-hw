@@ -21,6 +21,30 @@ from hedging_pipeline.logging_config import logger
 CLASS_LABEL_COL: Final[str] = "classification"
 
 
+def _normalize_event_type(et: object) -> str:
+    """Map raw event_type to canonical (adhoc | annual)."""
+    if pd.isna(et):
+        return ""
+    s = str(et).strip().lower()
+    if s == "annual":
+        return EVENT_TYPE_ANNUAL
+    if s == "adhoc":
+        return EVENT_TYPE_ADHOC
+    return s
+
+
+def _normalize_action(a: object) -> str:
+    """Map raw action to canonical add | del."""
+    if pd.isna(a):
+        return ""
+    s = str(a).strip().lower()
+    if s in (ACTION_ADD, "addition"):
+        return ACTION_ADD
+    if s in (ACTION_DEL, "delete", "deletion", "drop"):
+        return ACTION_DEL
+    return s
+
+
 class EventClassifier:
     """Classifies events with a label combining event_type and action (e.g. adhoc_add, annual_del)."""
 
@@ -35,8 +59,8 @@ class EventClassifier:
         if COL_ACTION not in df.columns:
             raise ValueError(f"Events must have column '{COL_ACTION}'")
 
-        et = df[COL_EVENT_TYPE]
-        ac = df[COL_ACTION]
+        et = df[COL_EVENT_TYPE].apply(_normalize_event_type)
+        ac = df[COL_ACTION].apply(_normalize_action)
         df[CLASS_LABEL_COL] = et + "_" + ac
 
         unknown_et = ~et.isin([EVENT_TYPE_ADHOC, EVENT_TYPE_ANNUAL]) & df[COL_EVENT_TYPE].notna()
