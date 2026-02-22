@@ -7,6 +7,7 @@ from hedging_pipeline.config import PipelineConfig
 from hedging_pipeline.enrichment import PriceEnricher
 from hedging_pipeline.loaders import DataQualityError, EventLoader
 from hedging_pipeline.pipeline import Pipeline
+from hedging_pipeline.summary import SummaryStats
 
 __all__ = [
     "PipelineConfig",
@@ -14,5 +15,6 @@ __all__ = [
     "EventLoader",
     "EventClassifier",
     "PriceEnricher",
+    "SummaryStats",
     "Pipeline",
 ]
