@@ -93,12 +93,10 @@ jobs:
 
       - name: Run pipeline (if data present)
         run: |
-          if [ -f nasdaq_events.xlsx ] && [ -f daily_bars.parquet ]; then
-            uv run run-pipeline --events nasdaq_events.xlsx --bars daily_bars.parquet --output-dir output
-          elif [ -f data/nasdaq_events.xlsx ] && [ -f data/daily_bars.parquet ]; then
-            uv run run-pipeline --events data/nasdaq_events.xlsx --bars data/daily_bars.parquet --output-dir output
+          if [ -f data/nasdaq_events.xlsx ] && [ -f data/daily_bars.parquet ]; then
+            uv run run-pipeline --output-dir output
           else
-            echo "Data files not found; skipping pipeline run."
+            echo "Data files not found in data/; skipping pipeline run."
           fi
 
       - name: Upload pipeline output
