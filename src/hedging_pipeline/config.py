@@ -14,15 +14,14 @@ PROJECT_ROOT: Final[Path] = (
     _candidate_root if (_candidate_root / "pyproject.toml").exists() else Path.cwd()
 )
 DATA_DIR: Final[Path] = PROJECT_ROOT / "data"
-DEFAULT_EVENTS_PATH: Path = DATA_DIR / "nasdaq_events.xlsx"
-DEFAULT_BARS_PATH: Path = DATA_DIR / "daily_bars.parquet"
+DEFAULT_EVENTS_PATH: Path = PROJECT_ROOT / "nasdaq_events.xlsx"
+DEFAULT_BARS_PATH: Path = PROJECT_ROOT / "daily_bars.parquet"
 OUTPUT_DIR: Path = PROJECT_ROOT / "output"
 
-# Fallback: if data/ does not exist, use project root (for assignment layout)
-if not DEFAULT_EVENTS_PATH.exists() and (PROJECT_ROOT / "nasdaq_events.xlsx").exists():
-    DEFAULT_EVENTS_PATH = PROJECT_ROOT / "nasdaq_events.xlsx"
-if not DEFAULT_BARS_PATH.exists() and (PROJECT_ROOT / "daily_bars.parquet").exists():
-    DEFAULT_BARS_PATH = PROJECT_ROOT / "daily_bars.parquet"
+if not DEFAULT_EVENTS_PATH.exists() and (DATA_DIR / "nasdaq_events.xlsx").exists():
+    DEFAULT_EVENTS_PATH = DATA_DIR / "nasdaq_events.xlsx"
+if not DEFAULT_BARS_PATH.exists() and (DATA_DIR / "daily_bars.parquet").exists():
+    DEFAULT_BARS_PATH = DATA_DIR / "daily_bars.parquet"
 
 # Event file
 EVENTS_SHEET_NAME: None | int | str = None  # None = first sheet
