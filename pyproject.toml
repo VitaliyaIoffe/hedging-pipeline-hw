@@ -18,7 +18,6 @@ dev = [
     "pytest-cov>=4.0.0",
     "hypothesis>=6.0.0",
     "ruff>=0.8.0",
-    "pyright>=1.1.0",
 ]
 viz = [
     "matplotlib>=3.7.0",
@@ -44,7 +43,6 @@ dev-dependencies = [
     "pytest-cov>=4.0.0",
     "hypothesis>=6.0.0",
     "ruff>=0.8.0",
-    "pyright>=1.1.0",
     "jupyter>=1.0.0",
 ]
 
@@ -96,13 +94,3 @@ ignore = ["E501"]  # line length handled by formatter
 [tool.ruff.format]
 quote-style = "double"
 
-# -----------------------------------------------------------------------------
-# Pyright (type checking)
-# -----------------------------------------------------------------------------
-[tool.pyright]
-pythonVersion = "3.10"
-typeCheckingMode = "standard"
-reportMissingImports = true
-reportMissingTypeStubs = false
-extraPaths = ["src"]
-# Use "standard" for stricter checks; pandas/ndarray need type narrows or stubs
