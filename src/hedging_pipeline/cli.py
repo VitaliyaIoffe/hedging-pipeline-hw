@@ -11,8 +11,11 @@ from pathlib import Path
 from hedging_pipeline.config import (
     DEFAULT_BARS_PATH,
     DEFAULT_EVENTS_PATH,
+    HEDGE_STRATEGY_DEFAULT,
+    HEDGE_SYMBOL,
     OUTLIER_STD_THRESHOLD,
     OUTPUT_DIR,
+    PipelineConfig,
 )
 from hedging_pipeline.logging_config import logger, setup_logging
 from hedging_pipeline.pipeline import Pipeline
@@ -41,6 +44,18 @@ def main() -> int:
     )
     parser.add_argument("--no-summary", action="store_true", help="Skip summary and outlier step")
     parser.add_argument(
+        "--hedge",
+        choices=("no_hedge", "single_benchmark"),
+        default=HEDGE_STRATEGY_DEFAULT,
+        help="Hedge strategy: no_hedge (excess=stock return) or single_benchmark (default)",
+    )
+    parser.add_argument(
+        "--hedge-symbol",
+        type=str,
+        default=HEDGE_SYMBOL,
+        help="Benchmark symbol for single_benchmark hedge (default: QQQ)",
+    )
+    parser.add_argument(
         "--logging-config",
         type=Path,
         default=None,
@@ -51,14 +66,22 @@ def main() -> int:
     if args.logging_config is not None:
         setup_logging(args.logging_config)
 
+    config = PipelineConfig(
+        events_path=args.events,
+        bars_path=args.bars,
+        output_dir=args.output_dir,
+        outlier_std_threshold=args.outlier_std,
+        hedge_strategy=args.hedge,
+        hedge_symbol=args.hedge_symbol,
+    )
     try:
-        pipeline = Pipeline()
+        pipeline = Pipeline(config=config)
         enriched, summary_df, _ = pipeline.run(
-            events_path=args.events,
-            bars_path=args.bars,
+            events_path=config.events_path,
+            bars_path=config.bars_path,
             run_summary=not args.no_summary,
-            output_dir=args.output_dir,
-            outlier_std_threshold=args.outlier_std,
+            output_dir=config.output_dir,
+            outlier_std_threshold=config.outlier_std_threshold,
         )
         logger.info("Pipeline finished. Enriched events: %d rows", len(enriched))
         if summary_df is not None:

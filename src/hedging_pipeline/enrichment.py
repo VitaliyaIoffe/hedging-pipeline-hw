@@ -1,10 +1,11 @@
 """
-Price enrichment and QQQ hedge: add returns and excess returns to classified events.
+Price enrichment and pluggable hedge: add returns and excess returns to classified events.
 """
 
 from __future__ import annotations
 
-from typing import Final
+from dataclasses import dataclass
+from typing import Final, Protocol
 
 import pandas as pd
 
@@ -20,17 +21,103 @@ from hedging_pipeline.config import (
 )
 from hedging_pipeline.logging_config import logger
 
+# Output column names (generic: hedge_*, not qqq_*)
 COL_ENTRY_DATE: Final[str] = "entry_date"
 COL_EXIT_DATE: Final[str] = "exit_date"
 COL_ENTRY_OPEN: Final[str] = "entry_open"
 COL_EXIT_CLOSE: Final[str] = "exit_close"
-COL_QQQ_ENTRY_OPEN: Final[str] = "qqq_entry_open"
-COL_QQQ_EXIT_CLOSE: Final[str] = "qqq_exit_close"
+COL_HEDGE_ENTRY_OPEN: Final[str] = "hedge_entry_open"
+COL_HEDGE_EXIT_CLOSE: Final[str] = "hedge_exit_close"
 COL_HOLDING_PERIOD_DAYS: Final[str] = "holding_period_trading_days"
 COL_STOCK_RETURN: Final[str] = "stock_return"
-COL_QQQ_RETURN: Final[str] = "qqq_return"
+COL_HEDGE_RETURN: Final[str] = "hedge_return"
 COL_EXCESS_RETURN: Final[str] = "excess_return"
 COL_FIRST_DAY_RETURN: Final[str] = "first_day_return"
+
+# Backward compatibility for code that referenced QQQ-specific names
+COL_QQQ_ENTRY_OPEN: Final[str] = COL_HEDGE_ENTRY_OPEN
+COL_QQQ_EXIT_CLOSE: Final[str] = COL_HEDGE_EXIT_CLOSE
+COL_QQQ_RETURN: Final[str] = COL_HEDGE_RETURN
+
+
+@dataclass(frozen=True)
+class HedgeResult:
+    """Result of computing hedge return for one event."""
+
+    return_pct: float | None
+    entry_open: float | None
+    exit_close: float | None
+
+
+class HedgeStrategy(Protocol):
+    """Protocol for pluggable hedge strategies."""
+
+    def compute(
+        self,
+        bars: pd.DataFrame,
+        entry_date: pd.Timestamp,
+        exit_date: pd.Timestamp,
+        ann_date: pd.Timestamp,
+        eff_date: pd.Timestamp,
+    ) -> HedgeResult:
+        """Compute hedge return over the same window as the stock. Returns HedgeResult."""
+        ...
+
+
+class SingleBenchmarkHedge:
+    """Hedge using a single benchmark symbol (e.g. QQQ) over the same entry/exit window."""
+
+    def __init__(self, symbol: str = HEDGE_SYMBOL) -> None:
+        self.symbol: str = symbol
+
+    def compute(
+        self,
+        bars: pd.DataFrame,
+        entry_date: pd.Timestamp,
+        exit_date: pd.Timestamp,
+        ann_date: pd.Timestamp,
+        eff_date: pd.Timestamp,
+    ) -> HedgeResult:
+        entry_d = _first_trading_day_after(bars, self.symbol, ann_date)
+        exit_d = _trading_day_on_or_before(bars, self.symbol, eff_date)
+        if entry_d is None or exit_d is None or exit_d < entry_d:
+            return HedgeResult(None, None, None)
+        # Fallback to stock dates if benchmark has no bar on its own first/last day
+        entry_d = entry_d or entry_date
+        exit_d = exit_d or exit_date
+        entry_open = _price_on_date(bars, self.symbol, entry_d, BARS_OPEN_COL)
+        exit_close = _price_on_date(bars, self.symbol, exit_d, BARS_CLOSE_COL)
+        if entry_open and exit_close and entry_open != 0:
+            ret = (exit_close - entry_open) / entry_open
+        else:
+            ret = None
+        return HedgeResult(ret, entry_open, exit_close)
+
+
+class NoHedge:
+    """No hedge: hedge return is 0, so excess return equals stock return."""
+
+    def compute(
+        self,
+        bars: pd.DataFrame,
+        entry_date: pd.Timestamp,
+        exit_date: pd.Timestamp,
+        ann_date: pd.Timestamp,
+        eff_date: pd.Timestamp,
+    ) -> HedgeResult:
+        return HedgeResult(0.0, None, None)
+
+
+def get_hedge_strategy(
+    name: str,
+    symbol: str | None = None,
+) -> HedgeStrategy:
+    """Factory: return a HedgeStrategy by name. Used by pipeline/config."""
+    if name == "no_hedge":
+        return NoHedge()
+    if name == "single_benchmark":
+        return SingleBenchmarkHedge(symbol=symbol or HEDGE_SYMBOL)
+    raise ValueError(f"Unknown hedge strategy: {name}. Use 'single_benchmark' or 'no_hedge'.")
 
 
 def _first_trading_day_after(
@@ -89,16 +176,24 @@ def _first_day_return_for_symbol(
 class PriceEnricher:
     """
     Enriches events with entry/exit dates, prices, holding period,
-    stock return, QQQ return, excess return, and first-day return.
+    stock return, hedge return, excess return, and first-day return.
+    Uses a pluggable HedgeStrategy (default: SingleBenchmarkHedge(QQQ)).
     """
 
-    def __init__(self, *, hedge_symbol: str = HEDGE_SYMBOL) -> None:
-        self.hedge_symbol: str = hedge_symbol
+    def __init__(
+        self,
+        *,
+        hedge_strategy: HedgeStrategy | None = None,
+    ) -> None:
+        self.hedge_strategy: HedgeStrategy = (
+            hedge_strategy if hedge_strategy is not None else SingleBenchmarkHedge()
+        )
 
     def enrich(self, events: pd.DataFrame, bars: pd.DataFrame) -> pd.DataFrame:
         """
         Enrich each event. Entry = first trading day after ann (open);
         exit = last trading day on or before eff (close).
+        Hedge return and excess use the configured HedgeStrategy.
         """
         df = events.copy()
         df[COL_ANN_DATE] = pd.to_datetime(df[COL_ANN_DATE])
@@ -108,11 +203,11 @@ class PriceEnricher:
         exit_dates: list[pd.Timestamp | None] = []
         entry_opens: list[float | None] = []
         exit_closes: list[float | None] = []
-        qqq_entry_opens: list[float | None] = []
-        qqq_exit_closes: list[float | None] = []
+        hedge_entry_opens: list[float | None] = []
+        hedge_exit_closes: list[float | None] = []
         holding_days: list[int | None] = []
         stock_returns: list[float | None] = []
-        qqq_returns: list[float | None] = []
+        hedge_returns: list[float | None] = []
         excess_returns: list[float | None] = []
         first_day_returns: list[float | None] = []
 
@@ -128,11 +223,11 @@ class PriceEnricher:
                 exit_dates.append(None)
                 entry_opens.append(None)
                 exit_closes.append(None)
-                qqq_entry_opens.append(None)
-                qqq_exit_closes.append(None)
+                hedge_entry_opens.append(None)
+                hedge_exit_closes.append(None)
                 holding_days.append(None)
                 stock_returns.append(None)
-                qqq_returns.append(None)
+                hedge_returns.append(None)
                 excess_returns.append(None)
                 first_day_returns.append(None)
                 if entry_d is None:
@@ -141,23 +236,16 @@ class PriceEnricher:
                     logger.debug("No valid exit for %s (eff %s)", ticker, eff)
                 continue
 
-            qqq_entry_d = _first_trading_day_after(bars, self.hedge_symbol, ann)
-            qqq_exit_d = _trading_day_on_or_before(bars, self.hedge_symbol, eff)
-            if qqq_entry_d is None or qqq_exit_d is None:
-                qqq_entry_d = qqq_entry_d or entry_d
-                qqq_exit_d = qqq_exit_d or exit_d
-
             entry_open = _price_on_date(bars, ticker, entry_d, BARS_OPEN_COL)
             exit_close = _price_on_date(bars, ticker, exit_d, BARS_CLOSE_COL)
-            qqq_entry_open = _price_on_date(bars, self.hedge_symbol, qqq_entry_d, BARS_OPEN_COL)
-            qqq_exit_close = _price_on_date(bars, self.hedge_symbol, qqq_exit_d, BARS_CLOSE_COL)
+            hedge_result = self.hedge_strategy.compute(bars, entry_d, exit_d, ann, eff)
 
             entry_dates.append(entry_d)
             exit_dates.append(exit_d)
             entry_opens.append(entry_open)
             exit_closes.append(exit_close)
-            qqq_entry_opens.append(qqq_entry_open)
-            qqq_exit_closes.append(qqq_exit_close)
+            hedge_entry_opens.append(hedge_result.entry_open)
+            hedge_exit_closes.append(hedge_result.exit_close)
 
             sym_bars = bars[
                 (bars[BARS_SYMBOL_COL] == ticker)
@@ -171,17 +259,13 @@ class PriceEnricher:
                 if entry_open and exit_close and entry_open != 0
                 else None
             )
-            qqq_ret = (
-                (qqq_exit_close - qqq_entry_open) / qqq_entry_open
-                if qqq_entry_open and qqq_exit_close and qqq_entry_open != 0
-                else None
-            )
+            hedge_ret = hedge_result.return_pct
             excess_ret = (
-                (stock_ret - qqq_ret) if stock_ret is not None and qqq_ret is not None else None
+                (stock_ret - hedge_ret) if stock_ret is not None and hedge_ret is not None else None
             )
 
             stock_returns.append(stock_ret)
-            qqq_returns.append(qqq_ret)
+            hedge_returns.append(hedge_ret)
             excess_returns.append(excess_ret)
             first_day_returns.append(_first_day_return_for_symbol(bars, ticker, entry_d))
 
@@ -189,11 +273,11 @@ class PriceEnricher:
         df[COL_EXIT_DATE] = exit_dates
         df[COL_ENTRY_OPEN] = entry_opens
         df[COL_EXIT_CLOSE] = exit_closes
-        df[COL_QQQ_ENTRY_OPEN] = qqq_entry_opens
-        df[COL_QQQ_EXIT_CLOSE] = qqq_exit_closes
+        df[COL_HEDGE_ENTRY_OPEN] = hedge_entry_opens
+        df[COL_HEDGE_EXIT_CLOSE] = hedge_exit_closes
         df[COL_HOLDING_PERIOD_DAYS] = holding_days
         df[COL_STOCK_RETURN] = stock_returns
-        df[COL_QQQ_RETURN] = qqq_returns
+        df[COL_HEDGE_RETURN] = hedge_returns
         df[COL_EXCESS_RETURN] = excess_returns
         df[COL_FIRST_DAY_RETURN] = first_day_returns
 

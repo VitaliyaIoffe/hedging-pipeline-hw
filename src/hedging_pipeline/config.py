@@ -58,6 +58,7 @@ BARS_COLUMN_MAP: Final[dict[str, str]] = {
 
 # Hedging
 HEDGE_SYMBOL: Final[str] = "QQQ"
+HEDGE_STRATEGY_DEFAULT: Final[str] = "single_benchmark"  # or "no_hedge"
 
 # Classification
 ACTION_ADD: Final[str] = "add"
@@ -74,7 +75,7 @@ OUTPUT_SUMMARY_CSV: Final[str] = "summary_by_group.csv"
 
 
 class PipelineConfig:
-    """Mutable config holder for paths and thresholds (e.g. for tests or CLI overrides)."""
+    """Mutable config holder for paths, thresholds, and hedge strategy."""
 
     def __init__(
         self,
@@ -83,8 +84,12 @@ class PipelineConfig:
         bars_path: Path | None = None,
         output_dir: Path | None = None,
         outlier_std_threshold: float | None = None,
+        hedge_strategy: str | None = None,
+        hedge_symbol: str | None = None,
     ) -> None:
         self.events_path: Path = events_path or DEFAULT_EVENTS_PATH
         self.bars_path: Path = bars_path or DEFAULT_BARS_PATH
         self.output_dir: Path = output_dir or OUTPUT_DIR
         self.outlier_std_threshold: float = outlier_std_threshold or OUTLIER_STD_THRESHOLD
+        self.hedge_strategy: str = hedge_strategy or HEDGE_STRATEGY_DEFAULT
+        self.hedge_symbol: str = hedge_symbol or HEDGE_SYMBOL
