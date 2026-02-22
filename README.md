@@ -12,7 +12,7 @@ A reusable data processing pipeline for NASDAQ-100 index add/drop events: load a
 
 ```bash
 uv sync --dev
-uv run run-pipeline --events nasdaq_events.xlsx --bars daily_bars.parquet --output-dir output
+uv run run-pipeline --output-dir output   # uses data/nasdaq_events.xlsx, data/daily_bars.parquet by default
 uv run pytest tests/ -v
 ```
 
@@ -37,12 +37,13 @@ Logging is configured from **`logging.ini`** in the project root. The CLI loads 
 
 ## Data
 
-Place input files either under `data/` or in the project root:
+Input files live in **`data/`** (default paths):
 
-- **nasdaq_events.xlsx** — NASDAQ-100 add/drop events (required columns: `ANN DATE AFTER CLOSE`, `EFF DATE MORNING OF`, `add`, `del`, `type`)
-- **daily_bars.parquet** — Daily OHLCV bars for event tickers and QQQ (columns: `Date`, `Symbol`, `open_daily`, `close_daily`, `volume_daily`)
+- **data/nasdaq_events.xlsx** — NASDAQ-100 add/drop events (required columns: `ANN DATE AFTER CLOSE`, `EFF DATE MORNING OF`, `add`, `del`, `type`)
+- **data/daily_bars.parquet** — Daily OHLCV bars for event tickers and QQQ (columns: `Date`, `Symbol`, `open_daily`, `close_daily`, `volume_daily`)
+- **data/candidate_assignment.md** — Assignment spec (reference only)
 
-Paths are configurable in `src/hedging_pipeline/config.py` or via CLI.
+Paths are configurable in `src/hedging_pipeline/config.py` or via `--events` / `--bars`.
 
 ## Running the pipeline
 
@@ -141,7 +142,7 @@ Config: coverage and Ruff in `pyproject.toml`. Static type checking (e.g. Pyrigh
 - **test:** tests (excluding benchmarks) with coverage; fails if coverage &lt; 80%.
 - **lint:** Ruff check and format.
 - **build:** `uv build` (wheel + sdist).
-- **run-pipeline:** runs the pipeline if `nasdaq_events.xlsx` and `daily_bars.parquet` are present in repo root or `data/`.
+- **run-pipeline:** runs the pipeline if `data/nasdaq_events.xlsx` and `data/daily_bars.parquet` are present.
 
 ## Design and data schemas
 

@@ -10,6 +10,7 @@ from hedging_pipeline.enrichment import (
     COL_FIRST_DAY_RETURN,
     COL_HOLDING_PERIOD_DAYS,
     COL_STOCK_RETURN,
+    NoHedge,
     PriceEnricher,
 )
 
@@ -83,6 +84,18 @@ def test_enrich_return_calculation(
 
 
 # ---------- Happy path ----------
+
+
+def test_enrich_no_hedge_excess_equals_stock_return(
+    sample_events: pd.DataFrame,
+    sample_bars: pd.DataFrame,
+) -> None:
+    """With NoHedge, hedge return is 0 so excess_return equals stock_return."""
+    enricher_no_hedge = PriceEnricher(hedge_strategy=NoHedge())
+    out = enricher_no_hedge.enrich(sample_events, sample_bars)
+    assert out[COL_STOCK_RETURN].iloc[0] == pytest.approx(0.10, rel=1e-5)
+    assert out[COL_EXCESS_RETURN].iloc[0] == pytest.approx(0.10, rel=1e-5)
+    assert out[COL_EXCESS_RETURN].iloc[0] == out[COL_STOCK_RETURN].iloc[0]
 
 
 def test_enrich_adds_columns(

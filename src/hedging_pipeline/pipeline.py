@@ -12,7 +12,7 @@ from hedging_pipeline.classification import EventClassifier
 from hedging_pipeline.config import (
     PipelineConfig,
 )
-from hedging_pipeline.enrichment import PriceEnricher
+from hedging_pipeline.enrichment import PriceEnricher, get_hedge_strategy
 from hedging_pipeline.loaders import EventLoader
 from hedging_pipeline.logging_config import logger
 from hedging_pipeline.summary import SummaryStats
@@ -35,7 +35,14 @@ class Pipeline:
         self.config: PipelineConfig = config or PipelineConfig()
         self.loader: EventLoader = loader or EventLoader()
         self.classifier: EventClassifier = classifier or EventClassifier()
-        self.enricher: PriceEnricher = enricher or PriceEnricher()
+        if enricher is not None:
+            self.enricher: PriceEnricher = enricher
+        else:
+            strategy = get_hedge_strategy(
+                self.config.hedge_strategy,
+                self.config.hedge_symbol,
+            )
+            self.enricher = PriceEnricher(hedge_strategy=strategy)
         self.summary_stats: SummaryStats = summary_stats or SummaryStats(
             outlier_std_threshold=self.config.outlier_std_threshold,
         )

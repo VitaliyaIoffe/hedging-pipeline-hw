@@ -4,7 +4,14 @@ NASDAQ-100 rebalancing event pipeline: load, classify, enrich, summarize.
 
 from hedging_pipeline.classification import EventClassifier
 from hedging_pipeline.config import PipelineConfig
-from hedging_pipeline.enrichment import PriceEnricher
+from hedging_pipeline.enrichment import (
+    HedgeResult,
+    HedgeStrategy,
+    NoHedge,
+    PriceEnricher,
+    SingleBenchmarkHedge,
+    get_hedge_strategy,
+)
 from hedging_pipeline.loaders import (
     BaseLoader,
     DailyBarsLoader,
@@ -23,9 +30,14 @@ __all__ = [
     "EventClassifier",
     "EventLoader",
     "EventsLoader",
+    "HedgeResult",
+    "HedgeStrategy",
+    "NoHedge",
     "Pipeline",
     "PipelineConfig",
     "PipelineLoader",
     "PriceEnricher",
+    "SingleBenchmarkHedge",
     "SummaryStats",
+    "get_hedge_strategy",
 ]
