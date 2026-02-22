@@ -1,0 +1,9 @@
+.hypothesis/
+.venv/
+.pytest_cache/
+.ruff_cache/
+.coverage
+coverage.xml
+output/
+data/
+dist/
