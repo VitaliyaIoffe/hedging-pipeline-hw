@@ -7,3 +7,5 @@ coverage.xml
 output/
 data/
 dist/
+__pycache__/
+src/__pycache__/
