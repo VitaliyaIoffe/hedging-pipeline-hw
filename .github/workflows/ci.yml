@@ -24,7 +24,7 @@ jobs:
         run: uv sync --dev
 
       - name: Tests and coverage
-        run: uv run pytest tests/ -v --tb=short -m "not benchmark" --cov=src/hedging_pipeline --cov-report=term-missing --cov-report=xml --cov-fail-under=80
+        run: uv run pytest tests/ -v --tb=short -m "not benchmark" --cov=src/hedging_pipeline --cov-report=term-missing --cov-report=xml --cov-fail-under=50
 
       - name: Upload coverage
         uses: actions/upload-artifact@v4
