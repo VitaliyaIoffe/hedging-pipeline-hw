@@ -17,10 +17,10 @@ def _make_raw_events(n: int) -> pd.DataFrame:
     base = pd.Timestamp("2020-01-01")
     return pd.DataFrame(
         {
-            "ANN DATE AFTER CLOSE": [base + pd.Timedelta(days=i * 30) for i in range(n)],
-            "EFF DATE MORNING OF": [base + pd.Timedelta(days=i * 30 + 10) for i in range(n)],
-            "add": [f"A{i}" for i in range(n)],
-            "del": [f"D{i}" for i in range(n)],
+            "ANN DATE AFTER CLOSE": [base + pd.Timedelta(days=idx * 30) for idx in range(n)],
+            "EFF DATE MORNING OF": [base + pd.Timedelta(days=idx * 30 + 10) for idx in range(n)],
+            "add": [f"A{idx}" for idx in range(n)],
+            "del": [f"D{idx}" for idx in range(n)],
             "type": ["adhoc"] * n,
         }
     )
@@ -28,13 +28,13 @@ def _make_raw_events(n: int) -> pd.DataFrame:
 
 def _make_bars(n_days: int, symbols: list[str]) -> pd.DataFrame:
     base = pd.Timestamp("2020-01-01")
-    dates = [base + pd.Timedelta(days=i) for i in range(n_days)]
+    dates = [base + pd.Timedelta(days=idx) for idx in range(n_days)]
     rows = []
-    for d in dates:
+    for date in dates:
         for sym in symbols:
             rows.append(
                 {
-                    "date": d,
+                    "date": date,
                     "symbol": sym,
                     "open": 100.0,
                     "close": 101.0,
@@ -75,13 +75,13 @@ def test_bench_classify(benchmark, n_events: int) -> None:
 def test_bench_enrich(benchmark, n_events: int) -> None:
     """Time PriceEnricher.enrich for n events with bars covering ~1 year."""
     enricher = PriceEnricher()
-    symbols = [HEDGE_SYMBOL] + [f"T{i}" for i in range(min(n_events, 20))]
+    symbols = [HEDGE_SYMBOL] + [f"T{idx}" for idx in range(min(n_events, 20))]
     bars = _make_bars(252, symbols)  # ~1 year trading days
     events = pd.DataFrame(
         {
             "ann_date": [pd.Timestamp("2020-06-01")] * n_events,
             "eff_date": [pd.Timestamp("2020-06-20")] * n_events,
-            "ticker": [f"T{i % 20}" for i in range(n_events)],
+            "ticker": [f"T{idx % 20}" for idx in range(n_events)],
             "action": ["add"] * n_events,
             "event_type": ["adhoc"] * n_events,
             "classification": ["adhoc_add"] * n_events,
@@ -105,7 +105,7 @@ def test_bench_summary_compute_and_flag(benchmark, n_rows: int) -> None:
     import random
 
     random.seed(123)
-    labels = [f"group_{i % 4}" for i in range(n_rows)]
+    labels = [f"group_{idx % 4}" for idx in range(n_rows)]
     excess = [random.gauss(0, 0.05) for _ in range(n_rows)]
     df = pd.DataFrame(
         {
@@ -115,9 +115,9 @@ def test_bench_summary_compute_and_flag(benchmark, n_rows: int) -> None:
     )
 
     def run():
-        s = stats.compute_group_summary(df)
-        o = stats.flag_outliers(df)
-        return s, o
+        summary_df = stats.compute_group_summary(df)
+        outliers_df = stats.flag_outliers(df)
+        return summary_df, outliers_df
 
     result = benchmark(run)
 

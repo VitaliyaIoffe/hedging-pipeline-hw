@@ -3,6 +3,7 @@
 Optional visualization: summary by group (mean excess return, win rate).
 Run after pipeline to plot from output/summary_by_group.csv.
 """
+
 from pathlib import Path
 
 from hedging_pipeline.config import OUTPUT_DIR, OUTPUT_SUMMARY_CSV
@@ -18,6 +19,7 @@ def plot_summary(summary_csv: Path, output_path: Path) -> None:
         return
 
     import pandas as pd
+
     df = pd.read_csv(summary_csv)
     if df.empty:
         logger.warning("Summary CSV is empty; nothing to plot")

@@ -5,7 +5,7 @@ Price enrichment and pluggable hedge: add returns and excess returns to classifi
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Final, Protocol
+from typing import Protocol
 
 import pandas as pd
 
@@ -16,28 +16,26 @@ from hedging_pipeline.config import (
     BARS_SYMBOL_COL,
     COL_ANN_DATE,
     COL_EFF_DATE,
+    COL_ENTRY_DATE,
+    COL_ENTRY_OPEN,
+    COL_EXCESS_RETURN,
+    COL_EXIT_CLOSE,
+    COL_EXIT_DATE,
+    COL_FIRST_DAY_RETURN,
+    COL_HEDGE_ENTRY_OPEN,
+    COL_HEDGE_EXIT_CLOSE,
+    COL_HEDGE_RETURN,
+    COL_HOLDING_PERIOD_DAYS,
+    COL_STOCK_RETURN,
     COL_TICKER,
     HEDGE_SYMBOL,
 )
 from hedging_pipeline.logging_config import logger
 
-# Output column names (generic: hedge_*, not qqq_*)
-COL_ENTRY_DATE: Final[str] = "entry_date"
-COL_EXIT_DATE: Final[str] = "exit_date"
-COL_ENTRY_OPEN: Final[str] = "entry_open"
-COL_EXIT_CLOSE: Final[str] = "exit_close"
-COL_HEDGE_ENTRY_OPEN: Final[str] = "hedge_entry_open"
-COL_HEDGE_EXIT_CLOSE: Final[str] = "hedge_exit_close"
-COL_HOLDING_PERIOD_DAYS: Final[str] = "holding_period_trading_days"
-COL_STOCK_RETURN: Final[str] = "stock_return"
-COL_HEDGE_RETURN: Final[str] = "hedge_return"
-COL_EXCESS_RETURN: Final[str] = "excess_return"
-COL_FIRST_DAY_RETURN: Final[str] = "first_day_return"
-
-# Backward compatibility for code that referenced QQQ-specific names
-COL_QQQ_ENTRY_OPEN: Final[str] = COL_HEDGE_ENTRY_OPEN
-COL_QQQ_EXIT_CLOSE: Final[str] = COL_HEDGE_EXIT_CLOSE
-COL_QQQ_RETURN: Final[str] = COL_HEDGE_RETURN
+# Re-export enrichment column names for backward compatibility (defined in config)
+COL_QQQ_ENTRY_OPEN: str = COL_HEDGE_ENTRY_OPEN
+COL_QQQ_EXIT_CLOSE: str = COL_HEDGE_EXIT_CLOSE
+COL_QQQ_RETURN: str = COL_HEDGE_RETURN
 
 
 @dataclass(frozen=True)
@@ -168,9 +166,9 @@ def _first_day_return_for_symbol(
     row = bars[(bars[BARS_SYMBOL_COL] == symbol) & (bars[BARS_DATE_COL] == entry_date)]
     if row.empty or row[BARS_OPEN_COL].iloc[0] == 0:
         return None
-    o = float(row[BARS_OPEN_COL].iloc[0])
-    c = float(row[BARS_CLOSE_COL].iloc[0])
-    return (c - o) / o
+    open_price = float(row[BARS_OPEN_COL].iloc[0])
+    close_price = float(row[BARS_CLOSE_COL].iloc[0])
+    return (close_price - open_price) / open_price
 
 
 class PriceEnricher:

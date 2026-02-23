@@ -34,10 +34,12 @@ def test_normalize_events_never_crashes(n: int) -> None:
         base = pd.Timestamp("2020-01-01")
         raw_df = pd.DataFrame(
             {
-                "ANN DATE AFTER CLOSE": [base + pd.Timedelta(days=i * 30) for i in range(n)],
-                "EFF DATE MORNING OF": [base + pd.Timedelta(days=i * 30 + 10) for i in range(n)],
-                "add": [f"A{i}" for i in range(n)],
-                "del": [f"D{i}" for i in range(n)],
+                "ANN DATE AFTER CLOSE": [base + pd.Timedelta(days=idx * 30) for idx in range(n)],
+                "EFF DATE MORNING OF": [
+                    base + pd.Timedelta(days=idx * 30 + 10) for idx in range(n)
+                ],
+                "add": [f"A{idx}" for idx in range(n)],
+                "del": [f"D{idx}" for idx in range(n)],
                 "type": ["adhoc"] * n,
             }
         )
@@ -66,8 +68,8 @@ def test_load_daily_bars_fuzz_columns(n: int) -> None:
             "volume_daily": [1_000_000] * (2 * n),
         }
     )
-    with tempfile.NamedTemporaryFile(suffix=".parquet", delete=False) as f:
-        path = Path(f.name)
+    with tempfile.NamedTemporaryFile(suffix=".parquet", delete=False) as tmp_file:
+        path = Path(tmp_file.name)
     try:
         df.to_parquet(path, index=False)
         out = loader.load_daily_bars(path)
@@ -137,10 +139,13 @@ def test_enrich_fuzz_event_count(n_events: int) -> None:
         )
     dates = pd.to_datetime(["2020-06-02", "2020-06-03", "2020-06-10"])
     bars = pd.DataFrame(
-        [{"date": d, "symbol": "T", "open": 100.0, "close": 101.0, "volume": 1e6} for d in dates]
+        [
+            {"date": date, "symbol": "T", "open": 100.0, "close": 101.0, "volume": 1e6}
+            for date in dates
+        ]
         + [
-            {"date": d, "symbol": HEDGE_SYMBOL, "open": 200.0, "close": 201.0, "volume": 1e6}
-            for d in dates
+            {"date": date, "symbol": HEDGE_SYMBOL, "open": 200.0, "close": 201.0, "volume": 1e6}
+            for date in dates
         ]
     )
     out = enricher.enrich(events, bars)
@@ -182,12 +187,12 @@ def test_compute_group_summary_fuzz(n_groups: int, group_size: int) -> None:
     """Group summary with random groups and sizes does not crash."""
     stats = SummaryStats()
     rows = []
-    for g in range(n_groups):
+    for group_idx in range(n_groups):
         for _ in range(group_size):
             rows.append(
                 {
-                    CLASS_LABEL_COL: f"group_{g}",
-                    COL_EXCESS_RETURN: 0.01 * (g - n_groups / 2),
+                    CLASS_LABEL_COL: f"group_{group_idx}",
+                    COL_EXCESS_RETURN: 0.01 * (group_idx - n_groups / 2),
                 }
             )
     df = pd.DataFrame(rows)

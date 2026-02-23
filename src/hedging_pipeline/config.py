@@ -51,6 +51,24 @@ BARS_COLUMN_MAP: Final[dict[str, str]] = {
     "volume_daily": BARS_VOLUME_COL,
 }
 
+# Enrichment output column names (generic: hedge_*, not qqq_*)
+COL_ENTRY_DATE: Final[str] = "entry_date"
+COL_EXIT_DATE: Final[str] = "exit_date"
+COL_ENTRY_OPEN: Final[str] = "entry_open"
+COL_EXIT_CLOSE: Final[str] = "exit_close"
+COL_HEDGE_ENTRY_OPEN: Final[str] = "hedge_entry_open"
+COL_HEDGE_EXIT_CLOSE: Final[str] = "hedge_exit_close"
+COL_HOLDING_PERIOD_DAYS: Final[str] = "holding_period_trading_days"
+COL_STOCK_RETURN: Final[str] = "stock_return"
+COL_HEDGE_RETURN: Final[str] = "hedge_return"
+COL_EXCESS_RETURN: Final[str] = "excess_return"
+COL_FIRST_DAY_RETURN: Final[str] = "first_day_return"
+
+# Backward compatibility for code that referenced QQQ-specific names
+COL_QQQ_ENTRY_OPEN: Final[str] = COL_HEDGE_ENTRY_OPEN
+COL_QQQ_EXIT_CLOSE: Final[str] = COL_HEDGE_EXIT_CLOSE
+COL_QQQ_RETURN: Final[str] = COL_HEDGE_RETURN
+
 # Hedging
 HEDGE_SYMBOL: Final[str] = "QQQ"
 HEDGE_STRATEGY_DEFAULT: Final[str] = "single_benchmark"  # or "no_hedge"
