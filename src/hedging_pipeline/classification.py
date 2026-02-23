@@ -25,24 +25,24 @@ def _normalize_event_type(et: object) -> str:
     """Map raw event_type to canonical (adhoc | annual)."""
     if pd.isna(et):
         return ""
-    s = str(et).strip().lower()
-    if s == "annual":
+    value = str(et).strip().lower()
+    if value == "annual":
         return EVENT_TYPE_ANNUAL
-    if s == "adhoc":
+    if value == "adhoc":
         return EVENT_TYPE_ADHOC
-    return s
+    return value
 
 
-def _normalize_action(a: object) -> str:
+def _normalize_action(raw_action: object) -> str:
     """Map raw action to canonical add | del."""
-    if pd.isna(a):
+    if pd.isna(raw_action):
         return ""
-    s = str(a).strip().lower()
-    if s in (ACTION_ADD, "addition"):
+    value = str(raw_action).strip().lower()
+    if value in (ACTION_ADD, "addition"):
         return ACTION_ADD
-    if s in (ACTION_DEL, "delete", "deletion", "drop"):
+    if value in (ACTION_DEL, "delete", "deletion", "drop"):
         return ACTION_DEL
-    return s
+    return value
 
 
 class EventClassifier:

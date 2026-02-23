@@ -49,8 +49,8 @@ def setup_logging(
         try:
             import yaml
 
-            with open(path) as f:
-                config = yaml.safe_load(f)
+            with open(path) as config_file:
+                config = yaml.safe_load(config_file)
             logging.config.dictConfig(config)
         except Exception:
             logging.basicConfig(

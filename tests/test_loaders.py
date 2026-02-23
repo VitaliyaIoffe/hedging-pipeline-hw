@@ -31,9 +31,9 @@ def test_load_events_raises_when_required_column_missing(
 ) -> None:
     required = ["ANN DATE AFTER CLOSE", "EFF DATE MORNING OF", "add", "del", "type"]
     cols = {
-        c: [pd.Timestamp("2020-06-01")] if "DATE" in c else ["X"]
-        for c in required
-        if c != missing_col
+        col: [pd.Timestamp("2020-06-01")] if "DATE" in col else ["X"]
+        for col in required
+        if col != missing_col
     }
     df = pd.DataFrame(cols)
     path = tmp_path / "bad.xlsx"
@@ -59,8 +59,8 @@ def test_normalize_events_row_count(loader: EventLoader, n_events: int, expected
         {
             "ANN DATE AFTER CLOSE": pd.to_datetime(["2020-06-01"] * n_events),
             "EFF DATE MORNING OF": pd.to_datetime(["2020-06-10"] * n_events),
-            "add": [f"A{i}" for i in range(n_events)],
-            "del": [f"D{i}" for i in range(n_events)],
+            "add": [f"A{idx}" for idx in range(n_events)],
+            "del": [f"D{idx}" for idx in range(n_events)],
             "type": ["adhoc"] * n_events,
         }
     )

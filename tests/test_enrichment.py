@@ -58,22 +58,22 @@ def test_enrich_return_calculation(
         ]
     )
     rows = []
-    for i, d in enumerate(dates):
+    for idx, date in enumerate(dates):
         rows.append(
             {
-                "date": d,
+                "date": date,
                 "symbol": "T",
-                "open": entry_open if i == 0 else 100.0,
-                "close": exit_close if i == len(dates) - 1 else 101.0,
+                "open": entry_open if idx == 0 else 100.0,
+                "close": exit_close if idx == len(dates) - 1 else 101.0,
                 "volume": 1e6,
             }
         )
         rows.append(
             {
-                "date": d,
+                "date": date,
                 "symbol": HEDGE_SYMBOL,
-                "open": qqq_entry if i == 0 else 200.0,
-                "close": qqq_exit if i == len(dates) - 1 else 201.0,
+                "open": qqq_entry if idx == 0 else 200.0,
+                "close": qqq_exit if idx == len(dates) - 1 else 201.0,
                 "volume": 1e6,
             }
         )

@@ -168,9 +168,9 @@ def _first_day_return_for_symbol(
     row = bars[(bars[BARS_SYMBOL_COL] == symbol) & (bars[BARS_DATE_COL] == entry_date)]
     if row.empty or row[BARS_OPEN_COL].iloc[0] == 0:
         return None
-    o = float(row[BARS_OPEN_COL].iloc[0])
-    c = float(row[BARS_CLOSE_COL].iloc[0])
-    return (c - o) / o
+    open_price = float(row[BARS_OPEN_COL].iloc[0])
+    close_price = float(row[BARS_CLOSE_COL].iloc[0])
+    return (close_price - open_price) / open_price
 
 
 class PriceEnricher:

@@ -41,21 +41,21 @@ class SummaryStats:
         if valid.empty:
             return pd.DataFrame()
 
-        def agg_fn(g: pd.DataFrame) -> pd.Series:
+        def agg_fn(group: pd.DataFrame) -> pd.Series:
             return pd.Series(
                 {
-                    "event_count": int(len(g)),
-                    "mean_excess_return": g[COL_EXCESS_RETURN].mean(),
-                    "median_excess_return": g[COL_EXCESS_RETURN].median(),
-                    "win_rate": (g[COL_EXCESS_RETURN] > 0).mean(),
+                    "event_count": int(len(group)),
+                    "mean_excess_return": group[COL_EXCESS_RETURN].mean(),
+                    "median_excess_return": group[COL_EXCESS_RETURN].median(),
+                    "win_rate": (group[COL_EXCESS_RETURN] > 0).mean(),
                     "avg_holding_period_trading_days": (
-                        g[COL_HOLDING_PERIOD_DAYS].mean()
-                        if COL_HOLDING_PERIOD_DAYS in g.columns
+                        group[COL_HOLDING_PERIOD_DAYS].mean()
+                        if COL_HOLDING_PERIOD_DAYS in group.columns
                         else None
                     ),
                     "avg_first_day_return": (
-                        g[COL_FIRST_DAY_RETURN].mean()
-                        if COL_FIRST_DAY_RETURN in g.columns
+                        group[COL_FIRST_DAY_RETURN].mean()
+                        if COL_FIRST_DAY_RETURN in group.columns
                         else None
                     ),
                 }
@@ -78,7 +78,9 @@ class SummaryStats:
             return df
 
         z_scores = df.groupby(CLASS_LABEL_COL)[COL_EXCESS_RETURN].transform(
-            lambda x: (x - x.mean()) / x.std() if x.std() != 0 else 0.0
+            lambda series: (series - series.mean()) / series.std()
+            if series.std() != 0
+            else 0.0
         )
         df[IS_OUTLIER_COL] = z_scores.abs() > self.outlier_std_threshold
         return df

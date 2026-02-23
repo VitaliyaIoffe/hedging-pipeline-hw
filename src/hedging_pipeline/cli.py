@@ -87,8 +87,8 @@ def main() -> int:
         if summary_df is not None:
             logger.info("Summary groups: %s", list(summary_df["classification"].values))
         return 0
-    except Exception as e:
-        logger.exception("Pipeline failed: %s", e)
+    except Exception as err:
+        logger.exception("Pipeline failed: %s", err)
         return 1
 
 

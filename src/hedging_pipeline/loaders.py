@@ -85,7 +85,9 @@ class EventsLoader(BaseLoader):
         logger.info("Loading events from %s", path)
         df: pd.DataFrame = pd.read_excel(path, sheet_name=self.events_sheet or 0)
 
-        missing: list[str] = [c for c in self.required_event_columns if c not in df.columns]
+        missing: list[str] = [
+            col for col in self.required_event_columns if col not in df.columns
+        ]
         if missing:
             raise DataQualityError(
                 f"Events file missing required columns: {missing}. Found: {list(df.columns)}"
@@ -109,14 +111,14 @@ class EventsLoader(BaseLoader):
         Transform event table so each row is one stock action (one addition or one deletion).
         """
         rows: list[dict[str, object]] = []
-        for _, r in raw_events.iterrows():
-            ann = r[_ANN_COL]
-            eff = r[_EFF_COL]
-            ev_type = str(r[_TYPE_COL]).strip().lower() if pd.notna(r[_TYPE_COL]) else ""
-            trade_mm = r[_TRADE_COL] if _TRADE_COL in raw_events.columns else None
+        for _, row in raw_events.iterrows():
+            ann = row[_ANN_COL]
+            eff = row[_EFF_COL]
+            ev_type = str(row[_TYPE_COL]).strip().lower() if pd.notna(row[_TYPE_COL]) else ""
+            trade_mm = row[_TRADE_COL] if _TRADE_COL in raw_events.columns else None
 
             for action, ticker_col in [("add", _ADD_COL), ("del", _DEL_COL)]:
-                ticker = r[ticker_col]
+                ticker = row[ticker_col]
                 if pd.isna(ticker) or (isinstance(ticker, str) and not ticker.strip()):
                     logger.debug("Skipping row with missing ticker for action %s", action)
                     continue
@@ -167,7 +169,11 @@ class DailyBarsLoader(BaseLoader):
         logger.info("Loading daily bars from %s", path)
         df = pd.read_parquet(path)
 
-        rename = {k: v for k, v in self.bars_column_map.items() if k in df.columns}
+        rename = {
+            raw_name: norm_name
+            for raw_name, norm_name in self.bars_column_map.items()
+            if raw_name in df.columns
+        }
         if not rename:
             raise DataQualityError(
                 f"Daily bars columns {list(df.columns)} do not match expected keys {list(self.bars_column_map.keys())}"
