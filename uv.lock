@@ -743,6 +743,7 @@ viz = [
 dev = [
     { name = "hypothesis" },
     { name = "jupyter" },
+    { name = "matplotlib" },
     { name = "pytest" },
     { name = "pytest-benchmark" },
     { name = "pytest-cov" },
@@ -768,6 +769,7 @@ requires-dist = [
 dev = [
     { name = "hypothesis", specifier = ">=6.0.0" },
     { name = "jupyter", specifier = ">=1.0.0" },
+    { name = "matplotlib", specifier = ">=3.7.0" },
     { name = "pytest", specifier = ">=7.0.0" },
     { name = "pytest-benchmark", specifier = ">=4.0.0" },
     { name = "pytest-cov", specifier = ">=4.0.0" },
