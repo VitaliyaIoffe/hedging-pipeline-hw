@@ -78,9 +78,7 @@ class SummaryStats:
             return df
 
         z_scores = df.groupby(CLASS_LABEL_COL)[COL_EXCESS_RETURN].transform(
-            lambda series: (series - series.mean()) / series.std()
-            if series.std() != 0
-            else 0.0
+            lambda series: (series - series.mean()) / series.std() if series.std() != 0 else 0.0
         )
         df[IS_OUTLIER_COL] = z_scores.abs() > self.outlier_std_threshold
         return df

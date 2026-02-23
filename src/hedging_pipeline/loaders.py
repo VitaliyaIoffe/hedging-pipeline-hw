@@ -85,9 +85,7 @@ class EventsLoader(BaseLoader):
         logger.info("Loading events from %s", path)
         df: pd.DataFrame = pd.read_excel(path, sheet_name=self.events_sheet or 0)
 
-        missing: list[str] = [
-            col for col in self.required_event_columns if col not in df.columns
-        ]
+        missing: list[str] = [col for col in self.required_event_columns if col not in df.columns]
         if missing:
             raise DataQualityError(
                 f"Events file missing required columns: {missing}. Found: {list(df.columns)}"

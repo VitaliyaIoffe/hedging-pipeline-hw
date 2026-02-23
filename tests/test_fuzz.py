@@ -35,7 +35,9 @@ def test_normalize_events_never_crashes(n: int) -> None:
         raw_df = pd.DataFrame(
             {
                 "ANN DATE AFTER CLOSE": [base + pd.Timedelta(days=idx * 30) for idx in range(n)],
-                "EFF DATE MORNING OF": [base + pd.Timedelta(days=idx * 30 + 10) for idx in range(n)],
+                "EFF DATE MORNING OF": [
+                    base + pd.Timedelta(days=idx * 30 + 10) for idx in range(n)
+                ],
                 "add": [f"A{idx}" for idx in range(n)],
                 "del": [f"D{idx}" for idx in range(n)],
                 "type": ["adhoc"] * n,
@@ -137,7 +139,10 @@ def test_enrich_fuzz_event_count(n_events: int) -> None:
         )
     dates = pd.to_datetime(["2020-06-02", "2020-06-03", "2020-06-10"])
     bars = pd.DataFrame(
-        [{"date": date, "symbol": "T", "open": 100.0, "close": 101.0, "volume": 1e6} for date in dates]
+        [
+            {"date": date, "symbol": "T", "open": 100.0, "close": 101.0, "volume": 1e6}
+            for date in dates
+        ]
         + [
             {"date": date, "symbol": HEDGE_SYMBOL, "open": 200.0, "close": 201.0, "volume": 1e6}
             for date in dates
